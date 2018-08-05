@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"os"
 	"strings"
-	"sync"
 	"io"
 )
 
@@ -32,12 +31,12 @@ func eachfile(path string, info os.FileInfo, err error) error {
 		return nil
 	}
 
-	log.Println("path is a mov", path)
+//	log.Println("path is a mov", path)
 
 	// explode path up into parts
 
 	if strings.Contains(path, "/Original Media/") {
-			log.Printf("Adding File: path='%s'\n", path)
+			// log.Printf("Adding File: path='%s'\n", path)
 			totalbytes += info.Size()
 			totalfiles += 1
 			filelist = append(filelist, path)
@@ -46,7 +45,7 @@ func eachfile(path string, info os.FileInfo, err error) error {
 }
 
 func main() {
-	log.Println("hello")
+//	log.Println("hello")
 
 	// 1. Walk file
 	var rootpath string
@@ -63,7 +62,7 @@ func main() {
 		rootpath = rp
 	}
 	
-	log.Println("rootpath", rootpath)
+//	log.Println("rootpath", rootpath)
 
 	totalbytes = 0
 	totalfiles = 0
@@ -73,24 +72,25 @@ func main() {
 	}
 	
 	log.Printf("finished walking %d files, %d bytes\n", totalfiles, totalbytes)
-	for _, v := range filelist {
-		log.Println("	", v)
-	}
+//	for _, v := range filelist {
+//		log.Println("	", v)
+//	}
 
 
 	// 2. copy files.
-	//var wg sync.WaitGroup
-	for _, v := range filelist {
+	statchan := make(chan int, 2)
+	statchan <- 1
 
+	for _, v := range filelist {
 		// target path
 		tp := maketargetpath(v,rootpath)
-		log.Println("	", v, "->", tp)
-
-		// make a waiter pool
-		//wg.Add(1)
-		//go copyfile(v, tp, &wg)
+		// log.Println("	", v, "->", tp)
+		
+		<-statchan
+		go copyfile(v, tp, statchan)
 	}
-	//wg.Wait()
+
+	<-statchan
 }
 
 func maketargetpath(op, rootpath string) string {
@@ -111,8 +111,9 @@ func maketargetpath(op, rootpath string) string {
 }
 
 // copyfile copies a file from one place to another
-func copyfile(op, np string, wg *sync.WaitGroup) {
-	defer wg.Done()
+func copyfile(op, np string, statchan chan int) {
+	log.Println("starting copyfile", op, "->", np)
+	defer func() { statchan <- 1 }()
 	rdf, err := os.Open(op)
 	if err != err {
 		log.Println("copyfile failed to open", op, "because", err)
