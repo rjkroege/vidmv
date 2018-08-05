@@ -1,17 +1,15 @@
 package main
 
 import (
-	"log"
-	"path/filepath"
-	"os"
-	"strings"
 	"io"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
 )
-
 
 var totalbytes int64
 var totalfiles int64
-
 
 func init() {
 	filelist = make([]string, 0, 100)
@@ -19,10 +17,9 @@ func init() {
 
 var filelist []string
 
-
 func eachfile(path string, info os.FileInfo, err error) error {
-//	log.Printf("visiting File: path='%s'\n", path)
-	
+	//	log.Printf("visiting File: path='%s'\n", path)
+
 	// test the file for having the right type
 	// 1. a .mov
 	// 2. in a Original Media directory
@@ -31,21 +28,21 @@ func eachfile(path string, info os.FileInfo, err error) error {
 		return nil
 	}
 
-//	log.Println("path is a mov", path)
+	//	log.Println("path is a mov", path)
 
 	// explode path up into parts
 
 	if strings.Contains(path, "/Original Media/") {
-			// log.Printf("Adding File: path='%s'\n", path)
-			totalbytes += info.Size()
-			totalfiles += 1
-			filelist = append(filelist, path)
+		// log.Printf("Adding File: path='%s'\n", path)
+		totalbytes += info.Size()
+		totalfiles += 1
+		filelist = append(filelist, path)
 	}
 	return nil
 }
 
 func main() {
-//	log.Println("hello")
+	//	log.Println("hello")
 
 	// 1. Walk file
 	var rootpath string
@@ -53,29 +50,28 @@ func main() {
 	if len(os.Args) > 1 {
 		// Could conceivably use flags here.
 		rootpath = os.Args[1]
-	}  else {
+	} else {
 
-	rp, err := os.Getwd()
-	if err != nil {
-		log.Fatal("Can't get current dir:", err)
-	}
+		rp, err := os.Getwd()
+		if err != nil {
+			log.Fatal("Can't get current dir:", err)
+		}
 		rootpath = rp
 	}
-	
-//	log.Println("rootpath", rootpath)
+
+	//	log.Println("rootpath", rootpath)
 
 	totalbytes = 0
 	totalfiles = 0
 
-	if err :=	filepath.Walk(rootpath, eachfile); err != nil {
+	if err := filepath.Walk(rootpath, eachfile); err != nil {
 		log.Fatal("bah! can't walk", err)
 	}
-	
-	log.Printf("finished walking %d files, %d bytes\n", totalfiles, totalbytes)
-//	for _, v := range filelist {
-//		log.Println("	", v)
-//	}
 
+	log.Printf("finished walking %d files, %d bytes\n", totalfiles, totalbytes)
+	//	for _, v := range filelist {
+	//		log.Println("	", v)
+	//	}
 
 	// 2. copy files.
 	statchan := make(chan int, 2)
@@ -83,9 +79,9 @@ func main() {
 
 	for _, v := range filelist {
 		// target path
-		tp := maketargetpath(v,rootpath)
+		tp := maketargetpath(v, rootpath)
 		// log.Println("	", v, "->", tp)
-		
+
 		<-statchan
 		go copyfile(v, tp, statchan)
 	}
@@ -95,7 +91,7 @@ func main() {
 
 func maketargetpath(op, rootpath string) string {
 	np := strings.TrimPrefix(op, rootpath)
-	np = strings.Map( func(r rune) rune {
+	np = strings.Map(func(r rune) rune {
 		switch r {
 		case ' ':
 			return '-'
@@ -103,8 +99,8 @@ func maketargetpath(op, rootpath string) string {
 			return '_'
 		case '#':
 			return ','
-		
-		} 
+
+		}
 		return r
 	}, np)
 	return np
@@ -127,7 +123,7 @@ func copyfile(op, np string, statchan chan int) {
 		return
 	}
 	defer wrf.Close()
-	
+
 	if _, err := io.Copy(wrf, rdf); err != nil {
 		log.Println("copyfile: failed to copy", op, "to", np, "because", err)
 	}
